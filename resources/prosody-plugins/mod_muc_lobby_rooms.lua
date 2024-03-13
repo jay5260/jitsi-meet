@@ -456,11 +456,33 @@ process_host_module(main_muc_component_config, function(host_module, host)
             destroy_lobby_room(room, nil);
         end
     end);
-        host_module:hook('muc-set-affiliation', function(event)
-        if jid_split(event.jid) ~= 'focus' and event.affiliation == 'owner' then
-            handle_create_lobby(event);
-       end
+host_module:hook('muc-invite', function(event)
+    local room, stanza = event.room, event.stanza;
+    local invitee = stanza.attr.to;
+    local from = stanza:get_child('x', 'http://jabber.org/protocol/muc#user')
+        :get_child('invite').attr.from;
+
+    if lobby_muc_service and room._data.lobbyroom then
+        local lobby_room_obj = lobby_muc_service.get_room_from_jid(room._data.lobbyroom);
+        if lobby_room_obj then
+            local occupant = lobby_room_obj:get_occupant_by_real_jid(invitee);
+            if occupant then
+                local display_name = occupant:get_presence():get_child_text(
+                        'nick', 'http://jabber.org/protocol/nick');
+
+                notify_lobby_access(room, from, occupant.nick, display_name, true);
+            end
+        end
+    end
 end);
+
+host_module:hook('muc-set-affiliation', function(event)
+
+          if jid_split(event.jid) ~= 'focus' and event.affiliation == 'owner' then
+                handle_create_lobby(event);
+         end
+  end);
+    end);
     host_module:hook('muc-disco#info', function (event)
         local room = event.room;
         if (room._data.lobbyroom and room:get_members_only()) then
@@ -583,7 +605,6 @@ end);
         end, 1) -- make sure we handle it before prosody that uses priority -2 for this
     end
 end);
-
 function handle_create_lobby(event)
     local room = event.room;
 
