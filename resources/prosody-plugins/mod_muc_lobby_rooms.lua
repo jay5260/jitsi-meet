@@ -456,6 +456,11 @@ process_host_module(main_muc_component_config, function(host_module, host)
             destroy_lobby_room(room, nil);
         end
     end);
+        host_module:hook('muc-set-affiliation', function(event)
+        if jid_split(event.jid) ~= 'focus' and event.affiliation == 'owner' then
+            handle_create_lobby(event);
+       end
+end);
     host_module:hook('muc-disco#info', function (event)
         local room = event.room;
         if (room._data.lobbyroom and room:get_members_only()) then
